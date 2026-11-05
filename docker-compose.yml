@@ -1,0 +1,137 @@
+# ==============================================================================
+# docker-compose.yml: Cross-Silo Federated Learning Multi-Container Mesh
+# ==============================================================================
+# All parameters (latency, jitter, packet loss, rounds, min cohort k, ports)
+# are dynamically configured via configs/config.yaml.
+# ==============================================================================
+
+version: "3.8"
+
+networks:
+  fl-net:
+    driver: bridge
+    name: fl-net
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. CENTRAL AGGREGATION SERVER & COORDINATOR
+  # ----------------------------------------------------------------------------
+  fl-server:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.server
+    container_name: fl-server
+    hostname: fl-server
+    ports:
+      - "8080:8080"   # FL coordination & weight aggregation
+      - "9090:9090"   # Prometheus telemetry exporter
+    environment:
+      - PYTHONUNBUFFERED=1
+      - CONFIG_FILE=/app/configs/config.yaml
+    volumes:
+      - ./configs:/app/configs:ro
+      - ./results:/app/results
+      - ./certs:/app/certs:ro
+    networks:
+      - fl-net
+    restart: unless-stopped
+
+  # ----------------------------------------------------------------------------
+  # 2. HOSPITAL CLIENT: VINDR-MAMMO (Siemens Inspiration, Metro Profile)
+  # ----------------------------------------------------------------------------
+  client-vindr:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.client
+    container_name: client-vindr
+    hostname: client-vindr
+    cap_add:
+      - NET_ADMIN    # Required for Linux tc netem traffic shaping
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SITE_NAME=vindr
+      - SERVER_ADDRESS=fl-server:8080
+      - CONFIG_FILE=/app/configs/config.yaml
+    volumes:
+      - ./data:/app/data:ro
+      - ./configs:/app/configs:ro
+      - ./certs:/app/certs:ro
+    networks:
+      - fl-net
+    depends_on:
+      - fl-server
+
+  # ----------------------------------------------------------------------------
+  # 3. HOSPITAL CLIENT: CMMD (GE Senographe, Metro Profile)
+  # ----------------------------------------------------------------------------
+  client-cmmd:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.client
+    container_name: client-cmmd
+    hostname: client-cmmd
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SITE_NAME=cmmd
+      - SERVER_ADDRESS=fl-server:8080
+      - CONFIG_FILE=/app/configs/config.yaml
+    volumes:
+      - ./data:/app/data:ro
+      - ./configs:/app/configs:ro
+      - ./certs:/app/certs:ro
+    networks:
+      - fl-net
+    depends_on:
+      - fl-server
+
+  # ----------------------------------------------------------------------------
+  # 4. HOSPITAL CLIENT: INBREAST (Siemens Novation, District Profile)
+  # ----------------------------------------------------------------------------
+  client-inbreast:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.client
+    container_name: client-inbreast
+    hostname: client-inbreast
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SITE_NAME=inbreast
+      - SERVER_ADDRESS=fl-server:8080
+      - CONFIG_FILE=/app/configs/config.yaml
+    volumes:
+      - ./data:/app/data:ro
+      - ./configs:/app/configs:ro
+      - ./certs:/app/certs:ro
+    networks:
+      - fl-net
+    depends_on:
+      - fl-server
+
+  # ----------------------------------------------------------------------------
+  # 5. HOSPITAL CLIENT: CDD-CESM (Low-Energy DM, District Profile)
+  # ----------------------------------------------------------------------------
+  client-cdd:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.client
+    container_name: client-cdd
+    hostname: client-cdd
+    cap_add:
+      - NET_ADMIN
+    environment:
+      - PYTHONUNBUFFERED=1
+      - SITE_NAME=cdd
+      - SERVER_ADDRESS=fl-server:8080
+      - CONFIG_FILE=/app/configs/config.yaml
+    volumes:
+      - ./data:/app/data:ro
+      - ./configs:/app/configs:ro
+      - ./certs:/app/certs:ro
+    networks:
+      - fl-net
+    depends_on:
+      - fl-server

@@ -56,7 +56,7 @@ local_baseline:
   max_epochs: 40               # Maximum training epochs for local models
   patience: 12                 # Early stopping patience on validation macro-AUC (Decision D-007)
   batch_size: 16               # Local batch size (Decision D-002: fits within 4 GB VRAM at 86.7 img/s)
-  backbone_lr: 0.0003          # Backbone learning rate (3e-4, Decision D-006)
+  backbone_lr: 0.0001          # Backbone learning rate (1e-4)
   weight_decay: 0.01           # AdamW weight decay
   lr_schedule: "cosine"        # LR scheduler: "cosine" or "constant"
   sites:                       # Sites to train local models on
@@ -73,7 +73,7 @@ centralized:
   max_epochs: 40               # Maximum training epochs for pooled/centralized models
   patience: 12                 # Early stopping patience on validation macro-AUC
   batch_size: 16               # Batch size
-  backbone_lr: 0.0003          # Backbone learning rate (3e-4)
+  backbone_lr: 0.0001          # Backbone learning rate (1e-4)
   weight_decay: 0.01           # AdamW weight decay
   lr_schedule: "cosine"        # LR scheduler: "cosine" or "constant"
   modes:                       # Centralized training variants
@@ -113,14 +113,43 @@ explainability:
 # 8. SYSTEMS NETWORK EMULATION & SECURE AGGREGATION (Phases P4 & P5)
 # ------------------------------------------------------------------------------
 systems:
+  # Network topology & listening ports
+  server_host: "0.0.0.0"
+  server_port: 8080            # Central aggregation server port
+  metrics_port: 9090           # Prometheus telemetry exporter port
+  cert_dir: "certs"            # TLS certificates directory
+  tls_enabled: false           # Enable mutual TLS (mTLS) authentication
+
+  # Distributed Protocol Timers & Cohort Guards
+  num_rounds: 3                # Containerized systems test rounds
   min_cohort_k: 3              # Minimum cohort guard (abort round if ready clients < k)
-  dropout_rate: 0.30           # Simulated district hospital non-random client dropout probability
+  t_ready_s: 15.0              # Timeout (seconds) for clients to announce READY
+  t_upload_s: 90.0             # Timeout (seconds) for client update uploads
+  use_secure_agg: true         # Enable pairwise additive masking (Secure Aggregation)
+
+  # Hospital Site Network Profile Mapping
+  site_profiles:
+    vindr: "metro_hospital"
+    cmmd: "metro_hospital"
+    inbreast: "district_hospital"
+    cdd: "district_hospital"
+
+  # Traffic Shaping Profiles (applied via Linux tc netem)
   netem_profiles:
     metro_hospital:
-      latency_ms: 5.0          # Metro low latency
-      jitter_ms: 1.0           # Jitter
+      latency_ms: 5.0          # Round-trip latency delay (ms)
+      jitter_ms: 1.0           # Latency jitter variance (ms)
       loss_pct: 0.0            # Packet loss percentage
     district_hospital:
-      latency_ms: 120.0        # District high latency
-      jitter_ms: 35.0          # Jitter
+      latency_ms: 120.0        # Round-trip latency delay (ms)
+      jitter_ms: 35.0          # Latency jitter variance (ms)
       loss_pct: 2.0            # Packet loss percentage
+    lan_native:
+      latency_ms: 0.0
+      jitter_ms: 0.0
+      loss_pct: 0.0
+
+  # Failure injection for systems dropout experiments (E3)
+  dropout_rates:
+    metro_hospital: 0.05       # 5% random dropout for stable metro sites
+    district_hospital: 0.30    # 30% correlated non-random dropout for district sites

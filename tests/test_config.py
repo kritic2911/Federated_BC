@@ -39,6 +39,28 @@ def test_master_config_exists_and_loads():
         assert section in cfg, f"Missing section '{section}' in configs/config.yaml"
 
 
+def test_systems_config_extraction():
+    """Verify systems network parameters and netem profiles can be read from config."""
+    cfg = load_config("configs/config.yaml")
+    sys_cfg = cfg.get("systems", {})
+
+    assert sys_cfg.get("server_port") == 8080
+    assert sys_cfg.get("min_cohort_k") >= 2
+    assert "site_profiles" in sys_cfg
+    assert "netem_profiles" in sys_cfg
+    assert "metro_hospital" in sys_cfg["netem_profiles"]
+    assert "district_hospital" in sys_cfg["netem_profiles"]
+
+    metro = sys_cfg["netem_profiles"]["metro_hospital"]
+    assert metro["latency_ms"] == 5.0
+    assert metro["jitter_ms"] == 1.0
+
+    district = sys_cfg["netem_profiles"]["district_hospital"]
+    assert district["latency_ms"] == 120.0
+    assert district["jitter_ms"] == 35.0
+    assert district["loss_pct"] == 2.0
+
+
 def test_thermal_config_extraction():
     """Verify create_thermal_guard accurately pulls cooldown thresholds and timings."""
     custom_cfg = {
