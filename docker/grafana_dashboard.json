@@ -1,0 +1,56 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "title": "Active Hospital Cohort & Dropouts",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "fl_cohort_size", "legendFormat": "Active Clients (|U|)", "refId": "A" },
+        { "expr": "fl_dropouts_total", "legendFormat": "Dropouts Total", "refId": "B" },
+        { "expr": "fl_aborted_rounds_total", "legendFormat": "Aborted Rounds Total", "refId": "C" }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "title": "Round Latency Decomposition (Phase 1 vs Phase 2)",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "fl_round_duration_seconds", "legendFormat": "Total Round Duration (s)", "refId": "A" },
+        { "expr": "fl_phase1_duration_seconds", "legendFormat": "Phase 1: Ready Discovery (s)", "refId": "B" },
+        { "expr": "fl_phase2_duration_seconds", "legendFormat": "Phase 2: Upload & SecAgg (s)", "refId": "C" }
+      ]
+    },
+    {
+      "collapsed": false,
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "id": 3,
+      "title": "Cumulative Network Wire Payload Transferred (Bytes)",
+      "type": "timeseries",
+      "targets": [
+        { "expr": "fl_bytes_transferred_total", "legendFormat": "Total Payload Bytes Exchanged", "refId": "A" }
+      ]
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["federated-learning", "mammography", "systems-btp"],
+  "time": { "from": "now-15m", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "Cross-Silo FL Mammography Systems Telemetry",
+  "uid": "fl-mammography-sys",
+  "version": 1
+}
+

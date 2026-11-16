@@ -5,7 +5,8 @@ FROM python:3.12-slim
 
 ENV PYTHONUNBUFFERED=1 \
     DEBIAN_FRONTEND=noninteractive \
-    MPLCONFIGDIR=/tmp/matplotlib_cache
+    MPLCONFIGDIR=/tmp/matplotlib_cache \
+    PYTHONPATH=/app
 
 # 1. Install traffic control (iproute2) and networking diagnostic utilities
 RUN apt-get update && apt-get install -y --no-install-recommends \

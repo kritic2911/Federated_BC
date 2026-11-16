@@ -196,6 +196,17 @@ Every entry is immutable once signed off; deviations and waivers must be logged 
     3. The high-resolution microcalcification detector and DBSCAN clustering module are **retained exclusively for client-side explainability and reporting**: generating cluster counts, spatial descriptors, and visual overlays in structured reports without transmitting raw pixel ROIs.
     4. All null results are formally documented as honest, negative findings in the BTP deliverable.
 
+---
+
+### D-011: Resolution of Centralized Baseline Numbers
+- **Date**: 2026-11-05 (Phase P4/P5 Audit)
+- **Status**: Accepted
+- **Context**: An inconsistency was identified between the older Phase P2 initial baseline table (`p2_results_compiled.json`) and the most recent unified evaluation conducted during Phase P3 (`docs/PROGRESS.md` lines 210-215). Both evaluations share the exact same overall pooled test Macro-AUC of **$0.8462 \pm 0.0028$**, but per-site numbers differed slightly:
+  - *Phase P3 Unified Re-evaluation (Most Recent)*: VinDr = **$0.7513 \pm 0.0033$**, CMMD = **$0.8068 \pm 0.0028$**, INbreast = **$0.8016 \pm 0.0184$**, CDD = **$0.8526 \pm 0.0069$**.
+  - *Older Phase P2 Initial Run*: VinDr = 0.7317 ± 0.0194, CMMD = 0.8030 ± 0.0114, INbreast = 0.8329 ± 0.0275, CDD = 0.8684 ± 0.0041.
+- **Decision**: The most recent Phase P3 unified evaluation metrics are adopted as the **official, current centralized baseline** across all BTP deliverables. The older Phase P2 initial baseline values are formally logged as **superseded**.
+
+
 
 
 

@@ -151,5 +151,5 @@ systems:
 
   # Failure injection for systems dropout experiments (E3)
   dropout_rates:
-    metro_hospital: 0.05       # 5% random dropout for stable metro sites
+    metro_hospital: 0.10       # 5% random dropout for stable metro sites
     district_hospital: 0.30    # 30% correlated non-random dropout for district sites

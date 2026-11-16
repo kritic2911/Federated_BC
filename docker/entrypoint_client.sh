@@ -10,7 +10,12 @@ set -e
 
 CONFIG_FILE="${CONFIG_FILE:-configs/config.yaml}"
 SITE_NAME="${SITE_NAME:-vindr}"
-INTERFACE="${NETEM_INTERFACE:-eth0}"
+
+# Detect default interface dynamically
+DEFAULT_IF=$(ip route show default 2>/dev/null | awk '/default/ {print $5}')
+INTERFACE="${DEFAULT_IF:-${NETEM_INTERFACE:-eth0}}"
+
+export PYTHONPATH="/app:${PYTHONPATH}"
 
 echo "=========================================================="
 echo " Starting FL Hospital Client: ${SITE_NAME}"

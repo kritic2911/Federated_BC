@@ -233,10 +233,11 @@ All hyperparameters, hardware thresholds, and training parameters across local b
 - **Local Baselines**: `max_epochs` (40), `patience` (12), `batch_size` (16), `backbone_lr` (3e-4), `sites`, `seeds`.
 - **Centralized Training**: `max_epochs` (40), `patience` (12), `batch_size` (16), `modes` (`pooled`, `site_balanced`).
 - **Federated Learning**: `rounds` (20), `local_epochs` (1), `batch_size` (8), `backbone_lr` (1e-4), `strategy` (`fedavg`), `aggregation_mode` (`uniform`).
+- **Distributed Systems (P4/P5)**: `server_port` (8080), `metrics_port` (9090), `min_cohort_k` (3), `t_ready_s` (15s), `t_upload_s` (90s), `use_secure_agg` (true), `site_profiles`, `netem_profiles`, `dropout_rates`.
 
 Modify [`configs/config.yaml`](file:///home/kc/breastFed/configs/config.yaml) to change settings globally, or pass command-line arguments to override specific runs.
 
-### Reproducing Baseline & FL Runs
+### Reproducing Baseline & FL Simulation Runs
 1. **Preprocess & Cache Data**:
    ```bash
    python scripts/build_manifest_and_cache.py
@@ -256,7 +257,98 @@ Modify [`configs/config.yaml`](file:///home/kc/breastFed/configs/config.yaml) to
 
 ---
 
-## 8. Governance & Attribution
+## 8. Systems, Networking & Telemetry Usage Guide (Phase P4 & P5)
+
+This repository provides two execution modes for distributed cross-silo FL: **Docker Multi-Container Mesh** and **Native Localhost Sockets**. Both enforce mutual TLS (mTLS), Linux traffic control (`tc netem`), pairwise additive masking (Secure Aggregation), Minimum-Cohort Guard ($k$), and live Prometheus telemetry.
+
+```
+                    ┌────────────────────────────────────────┐
+                    │          FL Aggregation Server         │
+                    │   - Two-Phase Round Coordinator        │
+                    │   - Minimum-Cohort Guard (k=3)         │
+                    │   - Prometheus Exporter (Port 9090)    │
+                    └───────────────────┬────────────────────┘
+                                        │ mTLS / TCP (fl-net)
+            ┌───────────────┬───────────┴───────────┬───────────────┐
+            ▼               ▼                       ▼               ▼
+     ┌─────────────┐ ┌─────────────┐         ┌─────────────┐ ┌─────────────┐
+     │client-vindr │ │ client-cmmd │         │client-inbr. │ │ client-cdd  │
+     │ Metro Netem │ │ Metro Netem │         │ Dist. Netem │ │ Dist. Netem │
+     │ 5ms / 1ms   │ │ 5ms / 1ms   │         │ 120ms/35ms  │ │ 120ms/35ms  │
+     └─────────────┘ └─────────────┘         └─────────────┘ └─────────────┘
+```
+
+### Mode 1: Docker Multi-Container Mesh (Recommended for Demonstrations)
+
+Runs the central server, all 4 hospital client containers, and an optional Grafana dashboard on an isolated bridge network (`fl-net`). Client containers apply kernel-level `tc netem` rules via `cap_add: [NET_ADMIN]`.
+
+1. **Generate Mutual TLS Certificates** (if not already generated):
+   ```bash
+   python scripts/generate_tls_certs.py
+   ```
+2. **Launch the Entire Mesh with Docker Compose**:
+   ```bash
+   docker compose up --build
+   ```
+3. **View Live Running Containers**:
+   ```bash
+   docker compose ps
+   ```
+4. **Inspect Client Logs & Traffic Shaping**:
+   ```bash
+   docker compose logs -f client-inbreast
+   ```
+5. **Stop and Clean Up**:
+   ```bash
+   docker compose down
+   ```
+
+### Mode 2: Native Localhost Networked Runner (No Docker Required)
+
+For environments without Docker, a standalone multi-process orchestrator runs the server and all hospital clients over real localhost TCP/TLS sockets:
+
+```bash
+# Run 3 communication rounds with Secure Aggregation enabled
+python scripts/run_networked_fl.py --rounds 3
+
+# Run with custom ports and minimum-cohort guard k=3
+python scripts/run_networked_fl.py --rounds 3 --min-k 3 --port 8080 --metrics-port 9090
+
+# Benchmark Plaintext FedAvg (to measure SecAgg overhead)
+python scripts/run_networked_fl.py --rounds 3 --no-secagg
+```
+
+### Visualizing Real-Time Telemetry & Dashboards
+
+1. **Prometheus Metrics Endpoint**:
+   While the server is running, scrape or inspect raw metrics:
+   ```bash
+   curl http://localhost:9090/metrics
+   ```
+2. **Interactive HTML Dashboard (Zero External Dependencies)**:
+   Open [`paper/figures/systems_dashboard.html`](file:///home/kc/breastFed/paper/figures/systems_dashboard.html) in your browser:
+   - Displays real-time KPIs: Active Cohort, Dropout Aborts, Wire Payload Exchanged, SecAgg Overhead.
+   - Interactive charts for Per-Round Bandwidth (MB), Latency Decomposition (Phase 1 vs Phase 2), and Cohort Dynamics.
+3. **Grafana Dashboard (Docker Mode)**:
+   If running via Docker Compose, access the Grafana UI at:
+   - URL: **`http://localhost:3000`**
+   - Credentials: Username `admin`, Password `admin`
+   - Pre-loaded with [`docker/grafana_dashboard.json`](file:///home/kc/breastFed/docker/grafana_dashboard.json) visualizing Prometheus metrics.
+
+### Generating Publication Transfer & Systems Graphs
+
+Generate high-resolution PNG figures from recorded systems telemetry:
+```bash
+python scripts/plot_systems_telemetry.py
+```
+This generates:
+- [`paper/figures/systems_transfer_bandwidth.png`](file:///home/kc/breastFed/paper/figures/systems_transfer_bandwidth.png): Per-round wire traffic (MB) & SecAgg overhead (+1.48%) vs Plaintext FedAvg.
+- [`paper/figures/systems_latency_breakdown.png`](file:///home/kc/breastFed/paper/figures/systems_latency_breakdown.png): Stacked duration of Phase 1 (Announcement/Ready) vs Phase 2 (Upload/Aggregate) with abort markers.
+- [`paper/figures/systems_cohort_privacy_guard.png`](file:///home/kc/breastFed/paper/figures/systems_cohort_privacy_guard.png): Hospital participation curve, failure injections, and Minimum-Cohort Guard ($k=3$) auto-abort boundary.
+
+---
+
+## 9. Governance & Attribution
 - **Simulated Environment**: All experiments simulate hospital sites using publicly accessible, de-identified datasets. This project makes **no claims of clinical deployment or direct clinical validity**.
 - **Data Governance**: Patient identifiers are cryptographically hashed using salted SHA-256 before entering any log, filename, checkpoint, or prediction file. Pixel arrays and DICOM headers are strictly processed locally and never transmitted to third-party hosted services.
 

@@ -1,0 +1,41 @@
+# ==============================================================================
+# Dockerfile: Unified FL Container (Shared by Server & Hospital Clients)
+# ==============================================================================
+# Builds fl-node:latest ONCE.
+# Server and clients reuse this exact image with zero re-downloading.
+# ==============================================================================
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    MPLCONFIGDIR=/tmp/matplotlib_cache \
+    PYTHONPATH=/app
+
+# 1. Install networking & debugging tools (cached layer)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    iproute2 \
+    iputils-ping \
+    curl \
+    procps \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# 2. Install lightweight CPU PyTorch & project dependencies (cached layer)
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch torchvision && \
+    pip install --no-cache-dir -r requirements.txt
+
+# 3. Copy entrypoint script for client traffic shaping
+COPY docker/entrypoint_client.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# 4. Copy fallback codebase
+COPY src /app/src
+COPY configs /app/configs
+COPY scripts /app/scripts
+
+# Ports for coordinator (8080) and Prometheus telemetry (9090)
+EXPOSE 8080 9090
+
