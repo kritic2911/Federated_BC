@@ -85,7 +85,7 @@ class FLClientNode:
                 try:
                     df = pd.read_csv(manifest_path)
                     train_df = df[(df["site"] == self.site) & (df["split"] == "train")]
-                    
+
                     max_samples = int(os.environ.get("MAX_SAMPLES", "0"))
                     if max_samples > 0 and len(train_df) > max_samples:
                         train_df = train_df.iloc[:max_samples]
@@ -95,7 +95,7 @@ class FLClientNode:
                     device_str = os.environ.get("TORCH_DEVICE", "cpu")
                     device = torch.device(device_str)
                     batch_size = int(os.environ.get("BATCH_SIZE", "4"))
-                    
+
                     self.fl_client = FLClient(
                         site=self.site,
                         train_df=train_df,
